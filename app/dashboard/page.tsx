@@ -1,4 +1,4 @@
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { Header } from '@/components/Header';
@@ -6,8 +6,21 @@ import { Card } from '@/components/Card';
 import { Leaderboard } from '@/components/Leaderboard';
 import { PicksForm } from '@/components/PicksForm';
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
 export default async function DashboardPage() {
-  const supabase = createServerComponentClient({ cookies });
+  const cookieStore = await cookies();
+  const supabase = createServerClient(supabaseUrl, supabaseKey, {
+    cookies: {
+      getAll: () => cookieStore.getAll().map(c => ({ name: c.name, value: c.value })),
+      setAll: (cookiesToSet) => {
+        cookiesToSet.forEach(({ name, value, options }) => {
+          cookieStore.set(name, value, options);
+        });
+      }
+    }
+  });
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) redirect('/auth');
 
